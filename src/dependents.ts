@@ -33,7 +33,7 @@ import {
   Legend,
   Slider,
   Tooltip,
- } from '@antv/component';
+} from '@antv/component';
 export { IComponent, IList } from '@antv/component/lib/interfaces';
 export {
   CategoryLegendCfg,
@@ -62,6 +62,8 @@ export {
   CrosshairTextBackgroundCfg,
   SliderCfg,
   TrendCfg,
+  EnhancedTextCfg,
+  LineAnnotationTextCfg,
 } from '@antv/component/lib/types';
 export { HtmlComponent, GroupComponent, Component, Crosshair };
 export { Annotation };
@@ -79,4 +81,3 @@ const { Html: HtmlTooltip } = Tooltip;
 export { HtmlTooltip };
 // Slider
 export { Slider };
-

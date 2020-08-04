@@ -1,4 +1,4 @@
-import { deepMix, each, filter } from '@antv/util';
+import { deepMix, each, filter, get } from '@antv/util';
 import { DIRECTION } from '../constant';
 import { AxisCfg, Datum, MirrorCfg, MirrorData } from '../interface';
 
@@ -33,7 +33,6 @@ export default class Mirror extends Facet<MirrorCfg, MirrorData> {
     if (this.cfg.transpose) {
       if (facet.columnIndex % 2 === 0) {
         view.coordinate().transpose().reflect('x');
-
       } else {
         view.coordinate().transpose();
       }
@@ -120,9 +119,8 @@ export default class Mirror extends Facet<MirrorCfg, MirrorData> {
       };
     }
 
-    return option
+    return option;
   }
-
 
   /**
    * 设置 y 坐标轴的文本、title 是否显示
@@ -139,19 +137,28 @@ export default class Mirror extends Facet<MirrorCfg, MirrorData> {
   private renderTitle() {
     each(this.facets, (facet: MirrorData, facetIndex: number) => {
       const { columnValue, rowValue, view } = facet;
+      const formatter = get(this.cfg.title, 'formatter');
 
       if (this.cfg.transpose) {
-        const config = deepMix({
-          position: [ '50%', '0%' ] as [string, string],
-          content: columnValue,
-        }, getFactTitleConfig(DIRECTION.TOP), this.cfg.title);
+        const config = deepMix(
+          {
+            position: ['50%', '0%'] as [string, string],
+            content: formatter ? formatter(columnValue) : columnValue,
+          },
+          getFactTitleConfig(DIRECTION.TOP),
+          this.cfg.title
+        );
 
         view.annotation().text(config);
       } else {
-        const config = deepMix({
-          position: [ '100%', '50%' ] as [string, string],
-          content: rowValue,
-        }, getFactTitleConfig(DIRECTION.RIGHT), this.cfg.title);
+        const config = deepMix(
+          {
+            position: ['100%', '50%'] as [string, string],
+            content: formatter ? formatter(rowValue) : rowValue,
+          },
+          getFactTitleConfig(DIRECTION.RIGHT),
+          this.cfg.title
+        );
 
         view.annotation().text(config);
       }

@@ -5,10 +5,11 @@ import { getElements, getElementsByState } from '../util';
 import { clearHighlight } from './highlight-util';
 import StateAction from './state';
 
-const STATUS_UNACTIVE = 'inactive';
-const STATUS_ACTIVE = 'active';
-type Callback = (el) => boolean;
+import { ELEMENT_STATE } from '../../../constant';
 
+export const STATUS_UNACTIVE = ELEMENT_STATE.INACTIVE;
+export const STATUS_ACTIVE = ELEMENT_STATE.ACTIVE;
+export type Callback = (el) => boolean;
 
 /**
  * @ignore
@@ -24,7 +25,7 @@ class ElementHighlight extends StateAction {
   }
 
   // 设置元素的 highlight
-  private setElementHighlight(el: Element, callback: Callback) {
+  protected setElementHighlight(el: Element, callback: Callback) {
     if (callback(el)) {
       if (el.hasState(STATUS_UNACTIVE)) {
         el.setState(STATUS_UNACTIVE, false);

@@ -1,12 +1,11 @@
 import { deepMix, each, get, isArray } from '@antv/util';
-
-import { BBox, IGroup, IShape } from '../dependents';
+import { BBox, Coordinate, IGroup, IShape } from '../dependents';
 import { LabelItem } from '../geometry/label/interface';
 import { AnimateOption, GeometryLabelLayoutCfg } from '../interface';
 
 import { doAnimate } from '../animate';
 import { getGeometryLabelLayout } from '../geometry/label';
-import { getReplaceAttrs } from '../util/graphics';
+import { getReplaceAttrs, polarToCartesian } from '../util/graphics';
 import { rotate, translate } from '../util/transform';
 
 /**
@@ -50,21 +49,21 @@ export default class Labels {
     this.shapesMap = {};
     const container = this.container;
     const offscreenGroup = this.createOffscreenGroup(); // 创建虚拟分组
-    // step 1: 在虚拟 group 中创建 shapes
-    for (const item of items) {
-      if (item) {
-        this.renderLabel(item, offscreenGroup);
+    if (items.length) {
+      // 如果 items 空的话就不进行绘制调整操作
+      // step 1: 在虚拟 group 中创建 shapes
+      for (const item of items) {
+        if (item) {
+          this.renderLabel(item, offscreenGroup);
+        }
       }
+      // step 2: 根据布局，调整 labels
+      this.doLayout(items, shapes);
+      // step 3: 绘制 labelLine
+      this.renderLabelLine(items);
+      // step 4: 根据用户设置的偏移量调整 label
+      this.adjustLabel(items);
     }
-
-    // step 2: 根据布局，调整 labels
-    this.doLayout(items, shapes);
-
-    // step 3: 绘制 labelLine
-    this.renderLabelLine(items);
-
-    // step 4: 根据用户设置的偏移量调整 label
-    this.adjustLabel(items);
 
     // 进行添加、更新、销毁操作
     const lastShapesMap = this.lastShapesMap;
@@ -172,16 +171,16 @@ export default class Labels {
       ...shapeAppendCfg,
     });
     let labelShape;
-    if ((content.isGroup && content.isGroup()) || (content.isShape && content.isShape()))  {
+    if ((content.isGroup && content.isGroup()) || (content.isShape && content.isShape())) {
       // 如果 content 是 Group 或者 Shape，根据 textAlign 调整位置后，直接将其加入 labelGroup
       const { width, height } = content.getCanvasBBox();
       const textAlign = get(cfg, 'textAlign', 'left');
 
       let x = cfg.x;
-      const y = cfg.y - (height / 2);
+      const y = cfg.y - height / 2;
 
       if (textAlign === 'center') {
-        x = x - (width / 2);
+        x = x - width / 2;
       } else if (textAlign === 'right' || textAlign === 'end') {
         x = x - width;
       }
@@ -230,10 +229,14 @@ export default class Labels {
   }
 
   private renderLabelLine(labelItems: LabelItem[]) {
+
     each(labelItems, (labelItem) => {
-      if (!labelItem) {
+      const coordinate: Coordinate = get(labelItem, 'coordinate');
+      if (!labelItem || !coordinate) {        
         return;
       }
+      const center = coordinate.getCenter();
+      const radius = coordinate.getRadius();
       if (!labelItem.labelLine) {
         // labelLine: null | false，关闭 label 对应的 labelLine
         return;
@@ -242,7 +245,7 @@ export default class Labels {
       const id = labelItem.id;
       let path = labelLineCfg.path;
       if (!path) {
-        const start = labelItem.start;
+        const start = polarToCartesian(center.x, center.y, radius, labelItem.angle);
         path = [
           ['M', start.x, start.y],
           ['L', labelItem.x, labelItem.y],
@@ -280,7 +283,7 @@ export default class Labels {
         const id = item.id;
         const labelGroup = this.shapesMap[id];
         if (!labelGroup.destroyed) {
-          const labelShape = labelGroup.find(ele => ele.get('type') === 'text');
+          const labelShape = labelGroup.find((ele) => ele.get('type') === 'text');
           if (labelShape) {
             if (item.offsetX) {
               labelShape.attr('x', labelShape.attr('x') + item.offsetX);

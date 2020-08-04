@@ -37,7 +37,6 @@ export default class Tooltip extends Controller<TooltipOption> {
   private guideGroup: IGroup;
 
   private isLocked: boolean = false;
-  private isVisible: boolean = true;
   private items;
   private title: string;
   private point: Point;
@@ -46,12 +45,14 @@ export default class Tooltip extends Controller<TooltipOption> {
     return 'tooltip';
   }
 
-  public init() { }
+  public init() {}
 
-  public render() {
+  private isVisible() {
     const option = this.view.getOptions().tooltip;
-    this.isVisible = option !== false;
+    return option !== false;
   }
+
+  public render() {}
 
   /**
    * Shows tooltip
@@ -59,7 +60,8 @@ export default class Tooltip extends Controller<TooltipOption> {
    */
   public showTooltip(point: Point) {
     this.point = point;
-    if (!this.isVisible) { // 如果设置 tooltip(false) 则始终不显示
+    if (!this.isVisible()) {
+      // 如果设置 tooltip(false) 则始终不显示
       return;
     }
     const view = this.view;
@@ -99,10 +101,17 @@ export default class Tooltip extends Controller<TooltipOption> {
           // 延迟生成
           this.renderTooltip();
         }
-        this.tooltip.update(mix({}, cfg, {
-          items,
-          title,
-        }, follow ? point : {}));
+        this.tooltip.update(
+          mix(
+            {},
+            cfg,
+            {
+              items,
+              title,
+            },
+            follow ? point : {}
+          )
+        );
         this.tooltip.show();
       }
 
@@ -309,15 +318,27 @@ export default class Tooltip extends Controller<TooltipOption> {
     return [];
   }
 
-  public layout() { }
+  public layout() {}
+
   public update() {
     if (this.point) {
       this.showTooltip(this.point);
     }
+    
+    if (this.tooltip) {
+      // #2279 修复resize之后tooltip越界的问题
+      // 确保tooltip已经创建的情况下
+      const canvas = this.view.getCanvas();
+      // 更新 region
+      this.tooltip.set('region', {
+        start: { x: 0, y: 0 },
+        end: { x: canvas.get('width'), y: canvas.get('height') },
+      });
+    }
   }
 
   // 获取 tooltip 配置，因为用户可能会通过 view.tooltip() 重新配置 tooltip，所以就不做缓存，每次直接读取
-  private getTooltipCfg() {
+  protected getTooltipCfg() {
     const view = this.view;
     const option = view.getOptions().tooltip;
     const theme = view.getTheme();
@@ -429,11 +450,15 @@ export default class Tooltip extends Controller<TooltipOption> {
       start = center;
     }
 
-    const cfg = deepMix({
-      start,
-      end,
-      container: this.getTooltipCrosshairsGroup(),
-    }, get(tooltipCfg, 'crosshairs', {}), this.getCrosshairsText('x', point, tooltipCfg));
+    const cfg = deepMix(
+      {
+        start,
+        end,
+        container: this.getTooltipCrosshairsGroup(),
+      },
+      get(tooltipCfg, 'crosshairs', {}),
+      this.getCrosshairsText('x', point, tooltipCfg)
+    );
     delete cfg.type; // 与 Crosshairs 组件的 type 冲突故删除
 
     let xCrosshair = this.xCrosshair;
@@ -495,16 +520,23 @@ export default class Tooltip extends Controller<TooltipOption> {
       type = 'Circle';
     }
 
-    cfg = deepMix({
-      container: this.getTooltipCrosshairsGroup()
-    }, cfg, get(tooltipCfg, 'crosshairs', {}), this.getCrosshairsText('y', point, tooltipCfg));
+    cfg = deepMix(
+      {
+        container: this.getTooltipCrosshairsGroup(),
+      },
+      cfg,
+      get(tooltipCfg, 'crosshairs', {}),
+      this.getCrosshairsText('y', point, tooltipCfg)
+    );
     delete cfg.type; // 与 Crosshairs 组件的 type 冲突故删除
 
     let yCrosshair = this.yCrosshair;
     if (yCrosshair) {
       // 如果坐标系发生直角坐标系与极坐标的切换操作
-      if ((coordinate.isRect && yCrosshair.get('type') === 'circle')
-        || (!coordinate.isRect && yCrosshair.get('type') === 'line')) {
+      if (
+        (coordinate.isRect && yCrosshair.get('type') === 'circle') ||
+        (!coordinate.isRect && yCrosshair.get('type') === 'line')
+      ) {
         yCrosshair = new Crosshair[type](cfg);
         yCrosshair.init();
       } else {

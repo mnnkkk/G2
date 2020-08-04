@@ -10,6 +10,8 @@ import { isModelChange } from './util/is-model-change';
 export interface PathCfg extends GeometryCfg {
   /** 是否连接空值 */
   connectNulls?: boolean;
+  /** 单个孤立数据点是否展示 */
+  showSinglePoint?: boolean;
 }
 
 /**
@@ -21,12 +23,15 @@ export default class Path extends Geometry {
   public readonly shapeType: string = 'line';
   /** 是否连接空值 */
   public connectNulls: boolean;
+  /** 单个孤立数据点是否展示 */
+  public showSinglePoint: boolean;
 
   constructor(cfg: PathCfg) {
     super(cfg);
 
-    const { connectNulls = false } = cfg;
+    const { connectNulls = false, showSinglePoint = true } = cfg;
     this.connectNulls = connectNulls;
+    this.showSinglePoint = showSinglePoint;
   }
 
   /**
@@ -56,7 +61,7 @@ export default class Path extends Geometry {
     } else {
       // element 已经创建
       const preShapeCfg = result.getModel();
-      if (isModelChange(preShapeCfg, shapeCfg)) {
+      if (this.isCoordinateChanged || isModelChange(preShapeCfg, shapeCfg)) {
         result.animate = this.animateOption;
         // 通过绘制数据的变更来判断是否需要更新，因为用户有可能会修改图形属性映射
         result.update(shapeCfg); // 更新对应的 element
@@ -101,6 +106,7 @@ export default class Path extends Geometry {
     shapeCfg.isStack = !!this.getAdjust('stack');
     shapeCfg.points = points;
     shapeCfg.connectNulls = this.connectNulls;
+    shapeCfg.showSinglePoint = this.showSinglePoint;
 
     return shapeCfg;
   }

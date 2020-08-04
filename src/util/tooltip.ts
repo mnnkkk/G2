@@ -1,15 +1,4 @@
-import {
-  contains,
-  filter,
-  find,
-  hasKey,
-  isArray,
-  isNil,
-  isNumberEqual,
-  isObject,
-  memoize,
-  values,
-} from '@antv/util';
+import { contains, filter, find, hasKey, isArray, isNil, isNumberEqual, isObject, memoize, values } from '@antv/util';
 import { FIELD_ORIGIN, GROUP_ATTRS } from '../constant';
 import { Attribute, Scale } from '../dependents';
 import Geometry from '../geometry/base';
@@ -248,8 +237,10 @@ export function findDataByPoint(point: Point, data: MappingDatum[], geometry: Ge
       }
     } else {
       // x 轴对应的数据为线性以及时间类型，进行二分查找，性能更好
-      if ((xValue > xScale.translate(lastXValue) || xValue < xScale.translate(firstXValue))
-        && (xValue > xScale.max || xValue < xScale.min)) {
+      if (
+        (xValue > xScale.translate(lastXValue) || xValue < xScale.translate(firstXValue)) &&
+        (xValue > xScale.max || xValue < xScale.min)
+      ) {
         // 不在数据范围内
         return null;
       }
@@ -320,7 +311,7 @@ export function getTooltipItems(data: MappingDatum, geometry: Geometry, title: s
         title: tooltipTitle,
         data: originData, // 原始数据
         mappingData: data, // 映射后的数据
-        name: itemName || tooltipTitle,
+        name: itemName,
         value: itemValue,
         color: data.color || defaultColor,
         marker: true,

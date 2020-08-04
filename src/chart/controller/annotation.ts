@@ -2,7 +2,7 @@ import { contains, deepMix, each, get, isArray, isFunction, isNil, isString, key
 
 import { Annotation as AnnotationComponent, IElement, IGroup, Scale } from '../../dependents';
 import {
-  AnnotationBaseOption as　BaseOption,
+  AnnotationBaseOption as BaseOption,
   AnnotationPosition as Position,
   ArcOption,
   ComponentOption,
@@ -84,7 +84,7 @@ export default class Annotation extends Controller<BaseOption[]> {
 
         if (component.get('type') === 'regionFilter') {
           // regionFilter 依赖绘制后的 Geometry Shapes
-          this.view.once(VIEW_LIFE_CIRCLE.AFTER_RENDER, () => {
+          this.view.getRootView().once(VIEW_LIFE_CIRCLE.AFTER_RENDER, () => {
             updateComponentFn(co);
           });
         } else {
@@ -94,7 +94,7 @@ export default class Annotation extends Controller<BaseOption[]> {
     } else {
       each(this.option, (option: BaseOption) => {
         if (option.type === 'regionFilter') {
-          this.view.once(VIEW_LIFE_CIRCLE.AFTER_RENDER, () => {
+          this.view.getRootView().once(VIEW_LIFE_CIRCLE.AFTER_RENDER, () => {
             // regionFilter 依赖绘制后的 Geometry Shapes
             createComponentFn(option);
           });
@@ -559,11 +559,10 @@ export default class Annotation extends Controller<BaseOption[]> {
         end: this.parsePosition(end),
       };
     } else if (type === 'text') {
-      const { position, rotate } = option as TextOption;
+      const { position, ...rest } = option as TextOption;
       o = {
         ...this.parsePosition(position),
-        content: option.content,
-        rotate,
+        ...rest,
       };
     } else if (type === 'dataMarker') {
       const { position, point, line, text, autoAdjust, direction } = option as DataMarkerOption;

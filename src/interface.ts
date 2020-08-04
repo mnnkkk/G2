@@ -14,6 +14,7 @@ import {
   CrosshairLineCfg,
   CrosshairTextBackgroundCfg,
   CrosshairTextCfg,
+  EnhancedTextCfg,
   GridLineCfg,
   GroupComponent,
   HtmlComponent,
@@ -29,6 +30,7 @@ import {
   Scale,
   ScaleConfig,
   ShapeAttrs,
+  LineAnnotationTextCfg,
 } from './dependents';
 
 import { View } from './chart';
@@ -113,8 +115,10 @@ export interface ShapeInfo {
   text?: string;
   /** 数据是否发生层叠 */
   isStack?: boolean;
-  /** 是否连接空值，对 Path Line Area 这三种 Geometry 生效 */
+  /** 是否连接空值，只对 Path Line Area 这三种 Geometry 生效。 */
   connectNulls?: boolean;
+  /** 是否展示单个孤立的数据点，只对 Path Line Area 这三种 Geometry 生效。 */
+  showSinglePoint?: boolean;
   /** 默认的 shape 样式 */
   defaultStyle?: LooseObject;
 }
@@ -256,8 +260,8 @@ export interface GeometryLabelCfg {
    * 仅当 geometry 为 interval 时生效，指定当前 label 与当前图形的相对位置。
    */
   position?:
-  | ((data: Datum, mappingData: MappingDatum, index: number) => IntervalGeometryLabelPosition)
-  | IntervalGeometryLabelPosition;
+    | ((data: Datum, mappingData: MappingDatum, index: number) => IntervalGeometryLabelPosition)
+    | IntervalGeometryLabelPosition;
   /** 动画配置。 */
   animate?: AnimateOption | false | null;
 }
@@ -287,7 +291,7 @@ export interface StateOption {
   inactive?: StateCfg;
   /** selected 状态配置。 */
   selected?: StateCfg;
-};
+}
 
 /** interval label 的位置 */
 export type IntervalGeometryLabelPosition = 'top' | 'bottom' | 'middle' | 'left' | 'right';
@@ -306,10 +310,13 @@ export type StyleCallback = (...args) => LooseObject;
 /** geometry.label() 接口回调函数定义 */
 export type LabelCallback = (...args) => GeometryLabelCfg | null | undefined;
 /** geometry label 中 content 属性的回调函数类型定义 */
-export type GeometryLabelContentCallback = (data: Datum, mappingData: MappingDatum, index: number) => string | IShape | IGroup;
+export type GeometryLabelContentCallback = (
+  data: Datum,
+  mappingData: MappingDatum,
+  index: number
+) => string | IShape | IGroup;
 /** state 下 style 回调函数定义 */
 export type StateStyleCallback = (element: Element) => LooseObject;
-
 
 // ============================ Geometry Shape 接口相关的类型定义 ============================
 /** 获取 shape marker 时需要的信息 */
@@ -405,7 +412,6 @@ export interface ShapePoint {
   size?: number;
 }
 
-
 /** 注册 ShapeFactory 需要实现的接口。 */
 export interface RegisterShapeFactory {
   /** 默认的 shape 类型。 */
@@ -457,7 +463,6 @@ export interface ShapeFactory extends RegisterShapeFactory {
 /** 自定义 Shape marker 的函数 */
 export type ShapeMarkerSymbol = (x: number, y: number, r: number) => PathCommand[];
 
-
 // ============================ Annotation 类型定义 ============================
 /** Annotation position 回调函数 */
 export type AnnotationPositionCallback = (
@@ -465,19 +470,20 @@ export type AnnotationPositionCallback = (
   yScales: Scale[] | Record<string, Scale>
 ) => [number, number];
 /** Annotation 位置相关属性的类型定义 */
-export type AnnotationPosition = [number | string, number | string] | Record<string, number | string> | AnnotationPositionCallback;
+export type AnnotationPosition =
+  | [number | string, number | string]
+  | Record<string, number | string>
+  | AnnotationPositionCallback;
 
 /** Annotation 定义的通用属性，chart.annotation().line({}) */
 export interface AnnotationBaseOption {
   readonly type?: string;
   /** 指定 annotation 是否绘制在 canvas 最上层，默认为 false, 即绘制在最下层 */
   readonly top?: boolean;
-  /** 图形样式属性 */
-  readonly style?: object;
   /** 是否进行动画 */
   readonly animate?: boolean;
   /** 动画参数配置，当且仅当 `animate` 属性为 true，即动画开启时生效。 */
-  animateOption?: ComponentAnimateOption;
+  readonly animateOption?: ComponentAnimateOption;
   /** x 方向的偏移量 */
   readonly offsetX?: number;
   /** y 方向的偏移量 */
@@ -490,6 +496,8 @@ export interface RegionPositionBaseOption extends AnnotationBaseOption {
   readonly start: AnnotationPosition;
   /** 结束位置 */
   readonly end: AnnotationPosition;
+  /** 图形样式属性 */
+  readonly style?: ShapeAttrs;
 }
 
 /** 使用 PointPosition 定位的组件配置 */
@@ -504,43 +512,27 @@ export interface ImageOption extends RegionPositionBaseOption {
   readonly src: string;
 }
 
+
+
 /** 使用 Line Annotation 组件的配置定义 */
 export interface LineOption extends RegionPositionBaseOption {
   /** 文本配置定义 */
-  readonly text?: {
-    /** 文本位置，除了制定 'start', 'center' 和 'end' 外，还可以使用百分比进行定位， 比如 '30%' */
-    readonly position: 'start' | 'center' | 'end' | string;
-    /** 是否自动旋转 */
-    readonly autoRotate?: boolean;
-    /** 显示的文本内容 */
-    readonly content: string;
-    /** 文本的图形样式属性 */
-    readonly style?: object;
-    /** x 方向的偏移量 */
-    readonly offsetX?: number;
-    /** y 方向偏移量 */
-    readonly offsetY?: number;
-  };
+  readonly text?: LineAnnotationTextCfg;
 }
 /** 使用 Arc Annotation 组件的配置定义 */
 export type ArcOption = RegionPositionBaseOption;
 /** 使用 Region Annotation 组件的配置定义 */
 export type RegionOption = RegionPositionBaseOption;
 /** 使用 Text Annotation 组件的配置定义 */
-export interface TextOption extends PointPositionBaseOption {
-  /** 显示的文本内容 */
-  readonly content: string | number;
-  /** 文本的旋转角度，弧度制 */
-  readonly rotate?: number;
-}
+export interface TextOption extends PointPositionBaseOption, EnhancedTextCfg {}
 /** 使用 DataMarker Annotation 组件的配置定义 */
 export interface DataMarkerOption extends PointPositionBaseOption {
   /** point 设置 */
-  readonly point?: null | { style?: object };
+  readonly point?: null | { style?: ShapeAttrs };
   /** line 设置 */
-  readonly line?: null | { style?: object; length?: number };
+  readonly line?: null | { style?: ShapeAttrs; length?: number };
   /** text 设置 */
-  readonly text: null | { style?: object; content: string };
+  readonly text: null | EnhancedTextCfg;
   /** 文本超出绘制区域时，是否自动调节文本方向，默认为 true */
   readonly autoAdjust?: boolean;
   /** 朝向，默认为 upward，可选值为 'upward' 或者 'downward' */
@@ -551,9 +543,9 @@ export interface DataRegionOption extends RegionPositionBaseOption {
   /** line长度，default为 0 */
   readonly lineLength?: number;
   /** 标注区间的配置 */
-  readonly region?: null | { style?: object };
+  readonly region?: null | { style?: ShapeAttrs };
   /** 文本的配置 */
-  readonly text?: null | { style?: object; content: string };
+  readonly text?: null | EnhancedTextCfg;
 }
 /** 使用 RegionFilter Annotation 组件的配置定义 */
 export interface RegionFilterOption extends RegionPositionBaseOption {
@@ -749,6 +741,13 @@ export interface ChartCfg {
    */
   readonly padding?: ViewPadding;
   /**
+   * 图表的内边距会在图表的padding的基础上加上appendPadding，使用方式参考 CSS 盒模型。
+   * @example
+   * 1. appendPadding: 20
+   * 2. appendPadding: [ 10, 30, 30 ]
+   */
+  readonly appendPadding?: ViewAppendPadding;
+  /**
    * 是否开启局部刷新，默认开启。
    */
   readonly localRefresh?: boolean;
@@ -796,6 +795,13 @@ export interface ViewCfg {
    * 2. padding: [ 10, 30, 30 ]
    */
   readonly padding?: ViewPadding;
+  /**
+   * 设置图表的内边距在padding的基础上增加appendPading的调整。
+   * @example
+   * 1. padding: 20
+   * 2. padding: [ 10, 30, 30 ]
+   */
+  readonly appendPadding?: ViewAppendPadding;
   /** 设置 view 实例主题。 */
   readonly theme?: LooseObject | string;
   /**
@@ -840,6 +846,11 @@ export interface LegendItem {
   marker?: MarkerCfg;
 }
 
+export interface G2LegendTitleCfg extends LegendTitleCfg {
+  /** title 文本显示内容 */
+  text?: string;
+}
+
 /**
  * 图例项配置
  */
@@ -866,7 +877,7 @@ export interface LegendCfg {
    *
    * 详见 {@link https://github.com/antvis/component/blob/81890719a431b3f9088e0c31c4d5d382ef0089df/src/types.ts#L639|LegendTitleCfg}，
    */
-  title?: LegendTitleCfg;
+  title?: G2LegendTitleCfg;
   /**
    * 背景框配置项。
    *
@@ -884,18 +895,18 @@ export interface LegendCfg {
   background?: LegendBackgroundCfg;
   /** 图例的位置。 */
   position?:
-  | 'top'
-  | 'top-left'
-  | 'top-right'
-  | 'right'
-  | 'right-top'
-  | 'right-bottom'
-  | 'left'
-  | 'left-top'
-  | 'left-bottom'
-  | 'bottom'
-  | 'bottom-left'
-  | 'bottom-right';
+    | 'top'
+    | 'top-left'
+    | 'top-right'
+    | 'right'
+    | 'right-top'
+    | 'right-bottom'
+    | 'left'
+    | 'left-top'
+    | 'left-bottom'
+    | 'bottom'
+    | 'bottom-left'
+    | 'bottom-right';
   /** 动画开关，默认关闭。 */
   animate?: boolean;
   /** 动画参数配置，当且仅当 `animate` 属性为 true，即动画开启时生效。 */
@@ -904,6 +915,12 @@ export interface LegendCfg {
    * **分类图例适用**，控制图例项水平方向的间距。
    */
   itemSpacing?: number;
+  /**
+   * **分类图例适用**，图例项的最大宽度，超出则自动缩略。
+   * `maxItemWidth` 可以是像素值；
+   * 也可以是相对值（取 0 到 1 范围的数值），代表占图表宽度的多少
+   */
+  maxItemWidth?: number;
   /**
    * **分类图例适用**，图例项的宽度, 默认为 null，自动计算。
    */
@@ -1067,7 +1084,12 @@ export interface TooltipCrosshairsText extends CrosshairTextCfg {
  * @param currentPoint 对应当前坐标点
  * @returns 返回当前 crosshairs 对应的辅助线文本配置
  */
-export type TooltipCrosshairsTextCallback = (type: string, defaultContent: any, items: any[], currentPoint: Point) => TooltipCrosshairsText;
+export type TooltipCrosshairsTextCallback = (
+  type: string,
+  defaultContent: any,
+  items: any[],
+  currentPoint: Point
+) => TooltipCrosshairsText;
 /** Tooltip crosshairs 配置结构 */
 export interface TooltipCrosshairs {
   /**
@@ -1321,6 +1343,14 @@ export interface AxisCfg {
   animateOption?: ComponentAnimateOption;
   /** 标记坐标轴 label 的方向，左侧为 1，右侧为 -1。 */
   verticalFactor?: number;
+  /**
+   * 配置坐标轴垂直方向的最大限制长度，对文本自适应有很大影响。
+   * 1. 可以直接设置像素值，如 100；
+   * 2. 也可设置绝对值，如 0.2，如果是 x 轴，则相对于图表的高度，如果是 y 轴，则相对于图表的宽度
+   *
+   * 在 G2 中，x 轴的文本默认最大高度为图表高度的 1/2，y 轴的文本默认最大长度为图表宽度的 1/3
+   */
+  verticalLimitLength?: number;
 }
 
 /** 配置项声明式 */
@@ -1340,15 +1370,16 @@ export interface Options {
   /** 坐标系配置。 */
   readonly coordinate?: CoordinateOption;
   /** 静态辅助元素声明。 */
-  readonly annotations?: Array<
-    ArcOption |
-    RegionFilterOption |
-    ImageOption |
-    LineOption |
-    TextOption |
-    RegionOption |
-    DataMarkerOption |
-    DataRegionOption>;
+  readonly annotations?: (
+    | ArcOption
+    | RegionFilterOption
+    | ImageOption
+    | LineOption
+    | TextOption
+    | RegionOption
+    | DataMarkerOption
+    | DataRegionOption
+  )[];
   /** Geometry 配置 */
   readonly geometries?: GeometryOption[];
   /** 开启/关闭动画，默认开启 */
@@ -1389,16 +1420,16 @@ export type AxisOption = AxisCfg | boolean;
 export type LegendOption = LegendCfg | boolean;
 /** G2 支持的度量类型 */
 export type ScaleType =
-  'linear' |
-  'cat' |
-  'category' |
-  'identity' |
-  'log' |
-  'pow' |
-  'time' |
-  'timeCat' |
-  'quantize' |
-  'quantile';
+  | 'linear'
+  | 'cat'
+  | 'category'
+  | 'identity'
+  | 'log'
+  | 'pow'
+  | 'time'
+  | 'timeCat'
+  | 'quantize'
+  | 'quantile';
 
 export type CoordinateRotate = ['rotate', number];
 export type CoordinateReflect = ['reflect', 'x' | 'y'];
@@ -1445,6 +1476,7 @@ export interface FacetTitle {
   readonly offsetY?: number;
   /** 文本样式。 */
   readonly style?: object;
+  readonly formatter?: (val: any) => any;
 }
 
 /**
@@ -1485,14 +1517,12 @@ export interface FacetData {
 /** rect 分面类型配置 */
 export interface RectCfg extends FacetCfg<RectData> {
   /** 行标题的样式。 */
-  readonly columnTitle?: FacetTitle,
+  readonly columnTitle?: FacetTitle;
   /** 列标题的样式。 */
-  readonly rowTitle?: FacetTitle,
+  readonly rowTitle?: FacetTitle;
 }
 
-export interface RectData extends FacetData {
-
-}
+export interface RectData extends FacetData {}
 
 // ===================== mirror 相关类型定义 =====================
 /** mirror 分面类型配置 */
@@ -1503,8 +1533,7 @@ export interface MirrorCfg extends FacetCfg<MirrorData> {
   readonly title?: FacetTitle;
 }
 
-export interface MirrorData extends FacetData {
-}
+export interface MirrorData extends FacetData {}
 
 // ===================== list 相关类型定义 =====================
 /** list 分面类型配置 */
@@ -1523,13 +1552,12 @@ export interface ListData extends FacetData {
 /** matrix 分面类型配置 */
 export interface MatrixCfg extends FacetCfg<MirrorData> {
   /** 列标题的样式 */
-  readonly columnTitle?: FacetTitle,
+  readonly columnTitle?: FacetTitle;
   /** 列标题的样式 */
-  readonly rowTitle?: FacetTitle,
+  readonly rowTitle?: FacetTitle;
 }
 
-export interface MatrixData extends FacetData {
-}
+export interface MatrixData extends FacetData {}
 
 // ===================== circle 相关类型定义 =====================
 /** circle 分面类型配置 */
@@ -1538,13 +1566,12 @@ export interface CircleCfg extends FacetCfg<CircleData> {
   readonly title?: FacetTitle;
 }
 
-export interface CircleData extends FacetData {
-}
+export interface CircleData extends FacetData {}
 
 // ===================== tree 相关类型定义 =====================
 
 export interface Line {
-  readonly style?: ShapeAttrs,
+  readonly style?: ShapeAttrs;
   readonly smooth?: boolean;
 }
 /** tree 分面类型配置 */
@@ -1578,6 +1605,8 @@ export interface FacetCfgMap {
 
 // ============================ 主题样式表定义 ============================
 export interface StyleSheet {
+  /** 背景色 */
+  backgroundColor?: string;
   /** 主题色 */
   brandColor?: string;
   /** 分类色板 1，在数据量小于等于 10 时使用 */
@@ -1765,7 +1794,6 @@ export interface StyleSheet {
   tooltipTextLineHeight?: number;
   /** tooltip 文本字体粗细 */
   tooltipTextFontWeight?: number | string;
-
 
   // -------------------- Geometry labels --------------------
   /** Geometry label 文本颜色 */
@@ -2158,8 +2186,9 @@ export type Renderer = 'svg' | 'canvas';
 export type Datum = Record<string, any>;
 export type Data = Datum[];
 export type ActionCallback = (context: IInteractionContext) => void;
-export type Padding = number[];
+export type Padding = [number, number, number, number];
 export type ViewPadding = number | number[] | 'auto';
+export type ViewAppendPadding = number | number[];
 export type Position = [number, number];
 export type AttributeType = 'position' | 'size' | 'color' | 'shape';
 export type ShapeVertices = RangePoint[] | Point[] | Point[][];

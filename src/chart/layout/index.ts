@@ -1,5 +1,6 @@
 import { Controller } from '../controller/base';
 import View from '../view';
+import { parsePadding } from '../../util/padding';
 import { calculatePadding } from './auto';
 
 // 布局函数的定义
@@ -28,20 +29,12 @@ export default function defaultLayout(view: View): void {
   const padding = calculatePadding(view);
 
   // 2. 计算出新的 coordinateBBox
-  const newCoordinateBBox = view.viewBBox.shrink(padding);
-  // 3. 如果 coordinateBBox 前后未发生变化则不需要进行组件的重布局
-  if (view.coordinateBBox.isEqual(newCoordinateBBox)) {
-    if (annotation) {
-      // 因为 Annotation 不参与布局，但是渲染的位置依赖于坐标系，所以可以将绘制阶段延迟到 layout() 进行
-      annotation.layout();
-    }
-    return;
-  }
-  view.coordinateBBox = newCoordinateBBox;
+  view.coordinateBBox = view.viewBBox.shrink(padding).shrink(parsePadding(view.appendPadding));
+
   view.adjustCoordinate();
 
   // 3. 根据最新的 coordinate 重新布局组件
-  [axis, slider, legend, annotation ].forEach((controller: Controller) => {
+  [axis, slider, legend, annotation].forEach((controller: Controller) => {
     if (controller) {
       controller.layout();
     }

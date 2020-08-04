@@ -40,6 +40,7 @@ import {
   ShapeFactory,
   ShapeInfo,
   ShapeMarkerCfg,
+  ShapeMarkerAttrs,
   ShapePoint,
   SizeAttrCallback,
   StateOption,
@@ -92,6 +93,7 @@ export interface InitCfg {
   scaleDefs?: Record<string, ScaleOption>;
   /** 因为数据使用的引用，所以需要有一个标识位标识数据是否发生了更新 */
   isDataChanged?: boolean;
+  isCoordinateChanged?: boolean;
 }
 
 /** Geometry 构造函数参数 */
@@ -207,6 +209,7 @@ export default class Geometry extends Base {
   private offscreenGroup: IGroup;
   private groupScales: Scale[];
   private hasSorted: boolean = false;
+  protected isCoordinateChanged: boolean = false;
 
   /**
    * 创建 Geometry 实例。
@@ -793,7 +796,7 @@ export default class Geometry extends Base {
    * @param [cfg] 更新的配置
    */
   public update(cfg: InitCfg = {}) {
-    const { data, isDataChanged } = cfg;
+    const { data, isDataChanged, isCoordinateChanged } = cfg;
     const { attributeOption, lastAttributeOption } = this;
 
     if (!isEqual(attributeOption, lastAttributeOption)) {
@@ -810,6 +813,7 @@ export default class Geometry extends Base {
 
     // 调整 scale
     this.adjustScale();
+    this.isCoordinateChanged = isCoordinateChanged;
   }
 
   /**
@@ -817,7 +821,7 @@ export default class Geometry extends Base {
    */
   public paint(isUpdate: boolean = false) {
     if (this.animateOption) {
-      this.animateOption = deepMix({}, getDefaultAnimateCfg(this.type, this.coordinate), this.animateOption)
+      this.animateOption = deepMix({}, getDefaultAnimateCfg(this.type, this.coordinate), this.animateOption);
     }
 
     this.defaultSize = undefined;
@@ -911,6 +915,7 @@ export default class Geometry extends Base {
     this.idFields = [];
     this.groupScales = undefined;
     this.hasSorted = false;
+    this.isCoordinateChanged = false;
   }
 
   /**
@@ -1017,7 +1022,7 @@ export default class Geometry extends Base {
    * @param cfg marker 信息
    * @returns
    */
-  public getShapeMarker(shapeName: string, cfg: ShapeMarkerCfg) {
+  public getShapeMarker(shapeName: string, cfg: ShapeMarkerCfg): ShapeMarkerAttrs {
     const shapeFactory = this.getShapeFactory();
     return shapeFactory.getMarker(shapeName, cfg);
   }
@@ -1196,7 +1201,7 @@ export default class Geometry extends Base {
    * 获取该 Geometry 下所有生成的 shapes。
    * @returns shapes
    */
-  public getShapes(): Array<IShape | IGroup> {
+  public getShapes(): (IShape | IGroup)[] {
     return this.elements.map((element: Element) => element.shape);
   }
 
@@ -1223,7 +1228,7 @@ export default class Geometry extends Base {
         itemArr.sort((obj1: Datum, obj2: Datum) => {
           return xScale.translate(obj1[FIELD_ORIGIN][xField]) - xScale.translate(obj2[FIELD_ORIGIN][xField]);
         });
-      };
+      }
     }
 
     this.hasSorted = true;
@@ -1331,7 +1336,7 @@ export default class Geometry extends Base {
     cfg.shape = shapeName;
     // 获取默认样式
     const theme = this.theme.geometries[this.shapeType];
-    cfg.defaultStyle = get(theme, [ shapeName, 'default' ], {}).style;
+    cfg.defaultStyle = get(theme, [shapeName, 'default'], {}).style;
 
     const styleOption = this.styleOption;
     if (styleOption) {
@@ -1369,7 +1374,7 @@ export default class Geometry extends Base {
         // element 已经创建
         const currentShapeCfg = this.getDrawCfg(mappingDatum);
         const preShapeCfg = result.getModel();
-        if (isModelChange(currentShapeCfg, preShapeCfg)) {
+        if (this.isCoordinateChanged || isModelChange(currentShapeCfg, preShapeCfg)) {
           result.animate = this.animateOption;
           // 通过绘制数据的变更来判断是否需要更新，因为用户有可能会修改图形属性映射
           result.update(currentShapeCfg); // 更新对应的 element
@@ -1522,10 +1527,10 @@ export default class Geometry extends Base {
 
     const groupedArray = this.groupData(data); // 数据分组
     const beforeAdjust = [];
-    for(let i = 0, len = groupedArray.length; i < len; i++) {
+    for (let i = 0, len = groupedArray.length; i < len; i++) {
       const subData = groupedArray[i];
       const arr = [];
-      for(let j = 0, subLen = subData.length; j < subLen; j++) {
+      for (let j = 0, subLen = subData.length; j < subLen; j++) {
         const originData = subData[j];
         const item = {};
         // tslint:disable-next-line: forin
@@ -1642,11 +1647,11 @@ export default class Geometry extends Base {
     }
     const scaleDefs = this.scaleDefs;
     const cfg: LooseObject = {};
-    if ((min < scale.min) && !get(scaleDefs, [field, 'min'])) {
+    if (min < scale.min && !get(scaleDefs, [field, 'min'])) {
       // 用户如果在列定义中定义了 min，则以用户定义的为准
       cfg.min = min;
     }
-    if ((max > scale.max) && !get(scaleDefs, [field, 'max'])) {
+    if (max > scale.max && !get(scaleDefs, [field, 'max'])) {
       // 用户如果在列定义中定义了 max
       cfg.max = max;
     }
@@ -1870,7 +1875,7 @@ export default class Geometry extends Base {
           const labelChildren = label.getChildren();
           for (let j = 0; j < labelChildren.length; j++) {
             const child = labelChildren[j];
-            child.cfg.name = [ 'element', 'label'];
+            child.cfg.name = ['element', 'label'];
             child.cfg.element = element;
           }
         }

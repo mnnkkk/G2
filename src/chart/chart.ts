@@ -1,9 +1,6 @@
-import { debounce, each, isString } from '@antv/util';
-
+import { debounce, each, isString, get } from '@antv/util';
 import { ChartCfg } from '../interface';
-
 import { GROUP_Z_INDEX } from '../constant';
-
 import { getEngine } from '../engine';
 import { createDom, getChartSize, removeDom, modifyCSS } from '../util/dom';
 import View from './view';
@@ -36,11 +33,12 @@ export default class Chart extends View {
       height,
       autoFit = false,
       padding,
+      appendPadding,
       renderer = 'canvas',
       pixelRatio,
       localRefresh = true,
       visible = true,
-      defaultInteractions = [ 'tooltip', 'legend-filter', 'legend-active', 'continuous-filter' ],
+      defaultInteractions = ['tooltip', 'legend-filter', 'legend-active', 'continuous-filter'],
       options,
       limitInPlot,
       theme,
@@ -73,11 +71,20 @@ export default class Chart extends View {
       middleGroup: canvas.addGroup({ zIndex: GROUP_Z_INDEX.MID }),
       foregroundGroup: canvas.addGroup({ zIndex: GROUP_Z_INDEX.FORE }),
       padding,
+      appendPadding,
       visible,
       options,
       limitInPlot,
       theme,
     });
+
+    // 设置主题背景色
+    const chartTheme = this.getTheme();
+    if (get(chartTheme, 'background')) {
+      modifyCSS(wrapperElement, {
+        background: get(chartTheme, 'background'),
+      });
+    }
 
     this.ele = ele;
     this.canvas = canvas;
@@ -95,8 +102,8 @@ export default class Chart extends View {
   }
 
   private initDefaultInteractions(interactions) {
-    each(interactions, interaction => {
-      this.interaction(interaction)
+    each(interactions, (interaction) => {
+      this.interaction(interaction);
     });
   }
 
@@ -137,6 +144,7 @@ export default class Chart extends View {
    * @returns
    */
   public changeVisible(visible: boolean) {
+    super.changeVisible(visible); // 需要更新 visible 变量
     this.wrapperElement.style.display = visible ? '' : 'none';
 
     return this;
@@ -146,9 +154,12 @@ export default class Chart extends View {
    * 自动根据容器大小 resize 画布
    */
   public forceFit() {
-    // 注意第二参数用 true，意思是即时 autoFit = false，forceFit() 调用之后一样是适配容器
-    const { width, height } = getChartSize(this.ele, true, this.width, this.height);
-    this.changeSize(width, height);
+    // skip if already destroyed
+    if (!this.destroyed) {
+      // 注意第二参数用 true，意思是即时 autoFit = false，forceFit() 调用之后一样是适配容器
+      const { width, height } = getChartSize(this.ele, true, this.width, this.height);
+      this.changeSize(width, height);
+    }
   }
 
   private updateCanvasStyle() {

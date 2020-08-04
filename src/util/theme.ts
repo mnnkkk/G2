@@ -1,5 +1,5 @@
 import * as TOOLTIP_CSS_CONST from '@antv/component/lib/tooltip/css-const';
-import { transform } from '@antv/matrix-util';
+import { ext } from '@antv/matrix-util';
 import { deepMix } from '@antv/util';
 import Element from '../geometry/element';
 import { LooseObject, StyleSheet } from '../interface';
@@ -30,7 +30,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
       inactive: {
         fillOpacity: styleSheet.pointInactiveFillOpacity,
         strokeOpacity: styleSheet.pointInactiveBorderOpacity,
-      }
+      },
     },
     hollowPoint: {
       default: {
@@ -51,7 +51,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
       },
       inactive: {
         strokeOpacity: styleSheet.hollowPointInactiveBorderOpacity,
-      }
+      },
     },
     area: {
       default: {
@@ -127,7 +127,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
         stroke: styleSheet.hollowIntervalInactiveBorderColor,
         lineWidth: styleSheet.hollowIntervalInactiveBorder,
         strokeOpacity: styleSheet.hollowIntervalInactiveBorderOpacity,
-      }
+      },
     },
     line: {
       default: {
@@ -159,10 +159,10 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
         textBaseline: 'middle',
         fontFamily: styleSheet.fontFamily,
       },
-      offset: 32,
     },
     label: {
       autoRotate: true,
+      autoEllipsis: true,
       autoHide: true,
       offset: 16,
       style: {
@@ -225,9 +225,11 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
     },
     flipPage: true,
     animate: false,
+    maxItemWidth: 0.2,
   };
 
   return {
+    background: styleSheet.backgroundColor,
     defaultColor: styleSheet.brandColor,
     padding: 'auto',
     fontFamily: styleSheet.fontFamily,
@@ -292,11 +294,11 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
                 const x = r * Math.cos(middleAngle);
                 const y = r * Math.sin(middleAngle);
                 return {
-                  matrix: transform(null, [['t', x, y]]),
+                  matrix: ext.transform(null, [['t', x, y]]),
                 };
               }
               return shapeStyles.interval.selected;
-            }
+            },
           },
         },
         'hollow-rect': {
@@ -937,7 +939,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
             style: shapeStyles.line.selected,
           },
         },
-      }
+      },
     },
     components: {
       axis: {
@@ -945,11 +947,13 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
           position: 'top',
           grid: null,
           title: null,
+          verticalLimitLength: 1 / 2,
         }),
         bottom: deepMix({}, axisStyles, {
           position: 'bottom',
           grid: null,
           title: null,
+          verticalLimitLength: 1 / 2,
         }),
         left: deepMix({}, axisStyles, {
           position: 'left',
@@ -960,6 +964,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
           line: null,
           tickLine: null,
           grid: axisGridStyles,
+          verticalLimitLength: 1 / 3,
         }),
         right: deepMix({}, axisStyles, {
           position: 'right',
@@ -970,6 +975,7 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
           line: null,
           tickLine: null,
           grid: axisGridStyles,
+          verticalLimitLength: 1 / 3,
         }),
         circle: deepMix({}, axisStyles, {
           title: null,
@@ -1034,6 +1040,8 @@ export function createThemeByStylesheet(styleSheet: StyleSheet): LooseObject {
           },
           slidable: true,
         },
+        // 图例与四条边之间的间距
+        margin: [0, 0, 0, 0],
       },
       tooltip: {
         showContent: true,

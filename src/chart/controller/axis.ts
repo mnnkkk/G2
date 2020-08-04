@@ -1,5 +1,5 @@
 import { deepMix, each, get, isUndefined } from '@antv/util';
-import { COMPONENT_TYPE, DIRECTION, LAYER } from '../../constant';
+import { DIRECTION, COMPONENT_TYPE, LAYER } from '../../constant';
 import { CircleAxis, CircleGrid, IGroup, LineAxis, LineGrid, Scale } from '../../dependents';
 import { AxisCfg, AxisOption, ComponentOption } from '../../interface';
 
@@ -11,7 +11,8 @@ import {
   getAxisRegion,
   getAxisThemeCfg,
   getAxisTitleText,
-  getCircleAxisCenterRadius
+  getCircleAxisCenterRadius,
+  isVertical,
 } from '../../util/axis';
 import { getAxisOption } from '../../util/axis';
 import { getCircleGridItems, getGridThemeCfg, getLineGridItems, showGrid } from '../../util/grid';
@@ -84,9 +85,13 @@ export default class Axis extends Controller<Option> {
       if (type === COMPONENT_TYPE.AXIS) {
         if (coordinate.isPolar) {
           if (dim === 'x') {
-            updated = coordinate.isTransposed ? getAxisRegion(coordinate, direction) : getCircleAxisCenterRadius(coordinate);
+            updated = coordinate.isTransposed
+              ? getAxisRegion(coordinate, direction)
+              : getCircleAxisCenterRadius(coordinate);
           } else if (dim === 'y') {
-            updated = coordinate.isTransposed ? getCircleAxisCenterRadius(coordinate) : getAxisRegion(coordinate, direction);
+            updated = coordinate.isTransposed
+              ? getCircleAxisCenterRadius(coordinate)
+              : getAxisRegion(coordinate, direction);
           }
         } else {
           updated = getAxisRegion(coordinate, direction);
@@ -95,13 +100,15 @@ export default class Axis extends Controller<Option> {
         if (coordinate.isPolar) {
           let items;
           if (coordinate.isTransposed) {
-            items = dim === 'x' ?
-              getCircleGridItems(coordinate, this.view.getYScales()[0], scale, alignTick, dim) :
-              getLineGridItems(coordinate, scale, dim, alignTick);
+            items =
+              dim === 'x'
+                ? getCircleGridItems(coordinate, this.view.getYScales()[0], scale, alignTick, dim)
+                : getLineGridItems(coordinate, scale, dim, alignTick);
           } else {
-            items = dim === 'x' ?
-              getLineGridItems(coordinate, scale, dim, alignTick) :
-              getCircleGridItems(coordinate, this.view.getXScale(), scale, alignTick, dim);
+            items =
+              dim === 'x'
+                ? getLineGridItems(coordinate, scale, dim, alignTick)
+                : getCircleGridItems(coordinate, this.view.getXScale(), scale, alignTick, dim);
           }
           updated = {
             items,
@@ -235,10 +242,9 @@ export default class Axis extends Controller<Option> {
       let axis = this.cache.get(axisId);
       // 存在则更新
       if (axis) {
-        const cfg = coordinate.isTransposed ?
-          // @ts-ignore
-          this.getLineAxisCfg(scale, xAxisOption, 'radius') :
-          this.getCircleAxisCfg(scale, xAxisOption, direction);
+        const cfg = coordinate.isTransposed
+          ? this.getLineAxisCfg(scale, xAxisOption, DIRECTION.RADIUS)
+          : this.getCircleAxisCfg(scale, xAxisOption, direction);
 
         omit(cfg, OMIT_CFG);
         axis.component.update(cfg);
@@ -250,8 +256,7 @@ export default class Axis extends Controller<Option> {
             // 默认不渲染转置极坐标下的坐标轴
             return;
           } else {
-            // @ts-ignore
-            axis = this.createLineAxis(scale, xAxisOption, layer, 'radius', dim);
+            axis = this.createLineAxis(scale, xAxisOption, layer, DIRECTION.RADIUS, dim);
           }
         } else {
           axis = this.createCircleAxis(scale, xAxisOption, layer, direction, dim);
@@ -264,11 +269,9 @@ export default class Axis extends Controller<Option> {
       let grid = this.cache.get(gridId);
       // 存在则更新
       if (grid) {
-        const cfg = coordinate.isTransposed ?
-          // @ts-ignore
-          this.getCircleGridCfg(scale, xAxisOption, 'radius', dim) :
-          // @ts-ignore
-          this.getLineGridCfg(scale, xAxisOption, 'circle', dim);
+        const cfg = coordinate.isTransposed
+          ? this.getCircleGridCfg(scale, xAxisOption, DIRECTION.RADIUS, dim)
+          : this.getLineGridCfg(scale, xAxisOption, DIRECTION.CIRCLE, dim);
         omit(cfg, OMIT_CFG);
         grid.component.update(cfg);
         updatedCache.set(gridId, grid);
@@ -278,12 +281,10 @@ export default class Axis extends Controller<Option> {
           if (isUndefined(xAxisOption)) {
             return;
           } else {
-            // @ts-ignore
-            grid = this.createCircleGrid(scale, xAxisOption, layer, 'radius', dim);
+            grid = this.createCircleGrid(scale, xAxisOption, layer, DIRECTION.RADIUS, dim);
           }
         } else {
-          // @ts-ignore
-          grid = this.createLineGrid(scale, xAxisOption, layer, 'circle', dim);
+          grid = this.createLineGrid(scale, xAxisOption, layer, DIRECTION.CIRCLE, dim);
         }
 
         if (grid) {
@@ -355,11 +356,9 @@ export default class Axis extends Controller<Option> {
           let axis = this.cache.get(axisId);
           // 存在则更新
           if (axis) {
-            const cfg = coordinate.isTransposed ?
-              // @ts-ignore
-              this.getCircleAxisCfg(scale, yAxisOption, 'circle'):
-              // @ts-ignore
-              this.getLineAxisCfg(scale, yAxisOption, 'radius');
+            const cfg = coordinate.isTransposed
+              ? this.getCircleAxisCfg(scale, yAxisOption, DIRECTION.CIRCLE)
+              : this.getLineAxisCfg(scale, yAxisOption, DIRECTION.RADIUS);
 
             // @ts-ignore
             omit(cfg, OMIT_CFG);
@@ -371,12 +370,10 @@ export default class Axis extends Controller<Option> {
               if (isUndefined(yAxisOption)) {
                 return;
               } else {
-                // @ts-ignore
-                axis = this.createCircleAxis(scale, yAxisOption, layer, 'circle', dim);
+                axis = this.createCircleAxis(scale, yAxisOption, layer, DIRECTION.CIRCLE, dim);
               }
             } else {
-              // @ts-ignore
-              axis = this.createLineAxis(scale, yAxisOption, layer, 'radius', dim);
+              axis = this.createLineAxis(scale, yAxisOption, layer, DIRECTION.RADIUS, dim);
             }
 
             this.cache.set(axisId, axis);
@@ -387,11 +384,9 @@ export default class Axis extends Controller<Option> {
           let grid = this.cache.get(gridId);
           // 存在则更新
           if (grid) {
-            const cfg = coordinate.isTransposed ?
-              // @ts-ignore
-              this.getLineGridCfg(scale, yAxisOption, 'circle', dim):
-              // @ts-ignore
-              this.getCircleGridCfg(scale, yAxisOption, 'radius', dim);
+            const cfg = coordinate.isTransposed
+              ? this.getLineGridCfg(scale, yAxisOption, DIRECTION.CIRCLE, dim)
+              : this.getCircleGridCfg(scale, yAxisOption, DIRECTION.RADIUS, dim);
             omit(cfg, OMIT_CFG);
             grid.component.update(cfg);
             updatedCache.set(gridId, grid);
@@ -401,12 +396,10 @@ export default class Axis extends Controller<Option> {
               if (isUndefined(yAxisOption)) {
                 return;
               } else {
-                // @ts-ignore
-                grid = this.createLineGrid(scale, yAxisOption, layer, 'circle', dim);
+                grid = this.createLineGrid(scale, yAxisOption, layer, DIRECTION.CIRCLE, dim);
               }
             } else {
-              // @ts-ignore
-              grid = this.createCircleGrid(scale, yAxisOption, layer, 'radius', dim);
+              grid = this.createCircleGrid(scale, yAxisOption, layer, DIRECTION.RADIUS, dim);
             }
 
             if (grid) {
@@ -463,16 +456,13 @@ export default class Axis extends Controller<Option> {
           } else {
             // 如果用户打开了隐藏的坐标轴 chart.axis(true)/chart.axis('x', true)
             // 那么对于转置了的极坐标，半径轴显示的是 x 轴对应的数据
-            // @ts-ignore
-            axis = this.createLineAxis(scale, xAxisOption, layer, 'radius', dim);
-            // @ts-ignore
-            grid = this.createCircleGrid(scale, xAxisOption, layer, 'radius', dim);
+            axis = this.createLineAxis(scale, xAxisOption, layer, DIRECTION.RADIUS, dim);
+            grid = this.createCircleGrid(scale, xAxisOption, layer, DIRECTION.RADIUS, dim);
           }
         } else {
           axis = this.createCircleAxis(scale, xAxisOption, layer, direction, dim);
           // grid，极坐标下的 x 轴网格线沿着半径方向绘制
-          // @ts-ignore
-          grid = this.createLineGrid(scale, xAxisOption, layer, 'circle', dim);
+          grid = this.createLineGrid(scale, xAxisOption, layer, DIRECTION.CIRCLE, dim);
         }
 
         this.cache.set(axisId, axis);
@@ -526,16 +516,12 @@ export default class Axis extends Controller<Option> {
             if (isUndefined(yAxisOption)) {
               return;
             } else {
-              // @ts-ignore
-              axis = this.createCircleAxis(scale, yAxisOption, layer, 'circle', dim);
-              // @ts-ignore
-              grid = this.createLineGrid(scale, yAxisOption, layer, 'circle', dim);
+              axis = this.createCircleAxis(scale, yAxisOption, layer, DIRECTION.CIRCLE, dim);
+              grid = this.createLineGrid(scale, yAxisOption, layer, DIRECTION.CIRCLE, dim);
             }
           } else {
-            // @ts-ignore
-            axis = this.createLineAxis(scale, yAxisOption, layer, 'radius', dim);
-            // @ts-ignore
-            grid = this.createCircleGrid(scale, yAxisOption, layer, 'radius', dim);
+            axis = this.createLineAxis(scale, yAxisOption, layer, DIRECTION.RADIUS, dim);
+            grid = this.createCircleGrid(scale, yAxisOption, layer, DIRECTION.RADIUS, dim);
           }
           this.cache.set(this.getId('axis', scale.field), axis);
           if (grid) {
@@ -567,8 +553,7 @@ export default class Axis extends Controller<Option> {
     const axis = {
       component: new LineAxis(this.getLineAxisCfg(scale, option, direction)),
       layer,
-      // @ts-ignore
-      direction: direction === 'radius' ? DIRECTION.NONE : direction,
+      direction: direction === DIRECTION.RADIUS ? DIRECTION.NONE : direction,
       type: COMPONENT_TYPE.AXIS,
       extra: { dim, scale },
     };
@@ -643,7 +628,7 @@ export default class Axis extends Controller<Option> {
           dim,
           scale,
           alignTick: get(cfg, 'alignTick', true),
-         },
+        },
       };
 
       grid.component.init();
@@ -669,17 +654,33 @@ export default class Axis extends Controller<Option> {
       ? deepMix({ title: { style: { text: titleText } } }, axisOption)
       : axisOption;
 
-    const cfg = deepMix({
-      container,
-      ...region,
-      ticks: scale.getTicks().map((tick) => ({ id: `${tick.tickValue}`, name: tick.text, value: tick.value })),
-      verticalFactor: coordinate.isPolar
-        ? getAxisFactorByRegion(region, coordinate.getCenter()) * -1
-        : getAxisFactorByRegion(region, coordinate.getCenter()),
-    }, axisThemeCfg, optionWithTitle);
+    const cfg = deepMix(
+      {
+        container,
+        ...region,
+        ticks: scale.getTicks().map((tick) => ({ id: `${tick.tickValue}`, name: tick.text, value: tick.value })),
+        verticalFactor: coordinate.isPolar
+          ? getAxisFactorByRegion(region, coordinate.getCenter()) * -1
+          : getAxisFactorByRegion(region, coordinate.getCenter()),
+      },
+      axisThemeCfg,
+      optionWithTitle
+    );
     const { animate, animateOption } = this.getAnimateCfg(cfg);
     cfg.animateOption = animateOption;
     cfg.animate = animate;
+
+    // 计算 verticalLimitLength
+    const isAxisVertical = isVertical(region);
+    // TODO: 1 / 3 等默认值需要有一个全局的配置的地方
+    const verticalLimitLength = get(cfg, 'verticalLimitLength', isAxisVertical ? 1 / 3 : 1 / 2);
+    if (verticalLimitLength <= 1) {
+      // 配置的相对值，相对于画布
+      const canvasWidth = this.view.getCanvas().get('width');
+      const canvasHeight = this.view.getCanvas().get('height');
+      cfg.verticalLimitLength = verticalLimitLength * (isAxisVertical ? canvasWidth : canvasHeight);
+    }
+
     return cfg;
   }
 
@@ -698,9 +699,14 @@ export default class Axis extends Controller<Option> {
     const gridThemeCfg = getGridThemeCfg(this.view.getTheme(), direction);
     // the cfg order should be ensure
     // grid 动画以 axis 为准
-    const gridCfg = deepMix({
-      container: this.gridContainer,
-    }, gridThemeCfg, get(axisOption, 'grid'), this.getAnimateCfg(axisOption));
+    const gridCfg = deepMix(
+      {
+        container: this.gridContainer,
+      },
+      gridThemeCfg,
+      get(axisOption, 'grid'),
+      this.getAnimateCfg(axisOption)
+    );
     gridCfg.items = getLineGridItems(this.view.getCoordinate(), scale, dim, get(gridCfg, 'alignTick', true));
 
     return gridCfg;
@@ -724,17 +730,21 @@ export default class Axis extends Controller<Option> {
     }
 
     const titleText = getAxisTitleText(scale, axisOption);
-    const axisThemeCfg = getAxisThemeCfg(this.view.getTheme(), 'circle');
+    const axisThemeCfg = getAxisThemeCfg(this.view.getTheme(), DIRECTION.CIRCLE);
     // the cfg order should be ensure
     const optionWithTitle = get(axisOption, ['title'])
       ? deepMix({ title: { style: { text: titleText } } }, axisOption)
       : axisOption;
-    const cfg = deepMix({
-      container,
-      ...getCircleAxisCenterRadius(this.view.getCoordinate()),
-      ticks,
-      verticalFactor: 1,
-    }, axisThemeCfg, optionWithTitle);
+    const cfg = deepMix(
+      {
+        container,
+        ...getCircleAxisCenterRadius(this.view.getCoordinate()),
+        ticks,
+        verticalFactor: 1,
+      },
+      axisThemeCfg,
+      optionWithTitle
+    );
     const { animate, animateOption } = this.getAnimateCfg(cfg);
     cfg.animate = animate;
     cfg.animateOption = animateOption;
@@ -756,12 +766,16 @@ export default class Axis extends Controller<Option> {
 
     // the cfg order should be ensure
     // grid 动画以 axis 为准
-    // @ts-ignore
-    const gridThemeCfg = getGridThemeCfg(this.view.getTheme(), 'radius');
-    const gridCfg = deepMix({
-      container: this.gridContainer,
-      center: this.view.getCoordinate().getCenter(),
-    }, gridThemeCfg, get(axisOption, 'grid'), this.getAnimateCfg(axisOption));
+    const gridThemeCfg = getGridThemeCfg(this.view.getTheme(), DIRECTION.RADIUS);
+    const gridCfg = deepMix(
+      {
+        container: this.gridContainer,
+        center: this.view.getCoordinate().getCenter(),
+      },
+      gridThemeCfg,
+      get(axisOption, 'grid'),
+      this.getAnimateCfg(axisOption)
+    );
     const alignTick = get(gridCfg, 'alignTick', true);
     const verticalScale = dim === 'x' ? this.view.getYScales()[0] : this.view.getXScale();
     gridCfg.items = getCircleGridItems(this.view.getCoordinate(), verticalScale, scale, alignTick, dim);
@@ -779,7 +793,8 @@ export default class Axis extends Controller<Option> {
   private getAnimateCfg(cfg) {
     return {
       animate: this.view.getOptions().animate && get(cfg, 'animate'), // 如果 view 关闭动画，则不执行动画
-      animateOption: cfg && cfg.animateOption ? deepMix({}, AXIS_DEFAULT_ANIMATE_CFG, cfg.animateOption) : AXIS_DEFAULT_ANIMATE_CFG,
+      animateOption:
+        cfg && cfg.animateOption ? deepMix({}, AXIS_DEFAULT_ANIMATE_CFG, cfg.animateOption) : AXIS_DEFAULT_ANIMATE_CFG,
     };
   }
 }

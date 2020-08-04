@@ -1,9 +1,10 @@
-import { isObject, each, get } from '@antv/util';
+import { isObject, each, find, get } from '@antv/util';
 
-import { BBox, IGroup, IShape  } from '../../../dependents';
-import { LabelItem } from '../interface';
+import { BBox, IGroup, IShape } from '../../../../dependents';
+import { LabelItem } from '../../interface';
 
-import { polarToCartesian } from '../../../util/graphics';
+import { polarToCartesian } from '../../../../util/graphics';
+import { IElement } from '@antv/g-base';
 
 /** label text和line距离 4px */
 const MARGIN = 4;
@@ -104,6 +105,14 @@ function antiCollision(labelShapes, labels, lineHeight, plotRange, center, isRig
     const labelShape = labelsMap[label.id];
     labelShape.attr('x', label.x);
     labelShape.attr('y', label.y);
+
+    // because group could not effect text-shape, should set text-shape position manually
+    const textShape = find(labelShape.getChildren(), (ele) => ele.get('type') === 'text') as IElement;
+    // @ts-ignore
+    if (textShape) {
+      textShape.attr('y', label.y);
+      textShape.attr('x', label.x);
+    }
   });
 }
 
@@ -158,13 +167,12 @@ export function distribute(items: LabelItem[], labels: IGroup[], shapes: IShape[
         return a.y - b.y;
       });
 
-
       antiCollision(labels, half, lineHeight, plotRange, center, index);
     });
   }
 
   // 配置 labelLine
-  each(items, item => {
+  each(items, (item) => {
     if (item && item.labelLine) {
       const distance = item.offset;
       const angle = item.angle;
@@ -181,7 +189,12 @@ export function distribute(items: LabelItem[], labels: IGroup[], shapes: IShape[
         // labelLine: true
         item.labelLine = {};
       }
-      item.labelLine.path = [`M ${startPoint.x}`, `${startPoint.y} Q${innerPoint.x}`, `${innerPoint.y} ${endPoint.x}`, endPoint.y].join(',');
+      item.labelLine.path = [
+        `M ${startPoint.x}`,
+        `${startPoint.y} Q${innerPoint.x}`,
+        `${innerPoint.y} ${endPoint.x}`,
+        endPoint.y,
+      ].join(',');
     }
   });
 }
